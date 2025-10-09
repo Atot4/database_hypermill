@@ -1,0 +1,14 @@
+# File Database (SQL, SQLite)
+*.db
+*.sqlite
+*.sqlite3
+
+# File terkait Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# File Sistem Operasi
+.DS_Store
+Thumbs.db

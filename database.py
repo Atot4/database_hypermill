@@ -4,12 +4,13 @@ import sqlite3
 from sqlite3 import Error
 import uuid
 
+
+USED_TOOL_DATABASE = 'tool_database/demo.db'
+USED_MATERIALS_DATABASE = 'tool_database/materials.db'
+
 st.title("Tool Database Hypermill")
 
-USED_TOOL_DATABASE = 'tool_database.db'
-USED_MATERIAL_DATABASE = 'materials.db'
 
-@st.cache_resource
 def create_connection(db_file):
     """
     Membuat koneksi ke database SQLite yang namanya ditentukan oleh db_file
@@ -52,7 +53,7 @@ def fetch_tool_database(conn):
     """Mengambil semua data dari tool_database dan mengembalikannya sebagai dictionary of DataFrames."""
 
     queries = {
-        'UsedMaterials': 'SELECT * FROM Materials',
+        'Materials': 'SELECT * FROM Materials',
         'NCTools': 'SELECT * FROM NCTools',
         'Tools': 'SELECT * FROM Tools',
         'Folders': 'SELECT * FROM Folders',
@@ -108,13 +109,10 @@ def get_tool_database():
             st.error("Gagal memuat data dari database. Silakan periksa pesan error di atas.")
             return
 
-        # # --- Hanya Tampilkan Materials Data untuk Debugging Awal ---
-        # st.subheader("Data Tabel Materials")
-        # if 'Materials' in dict_dataframe:
-        #     # Menggunakan .sort_values untuk menampilkan data terbaru di atas
-        #     st.dataframe(dict_dataframe['Materials'].sort_values('id', ascending=False), use_container_width=True)
-            
-        # # ----------------------------------------------------------- 
+        # Mengambil data material dari tabel Materials
+        df_material = dict_dataframe['Materials']
+        st.dataframe(df_material)
+
 
         # Menggabungkan semua dataframe
         # ===============================================================================
@@ -213,88 +211,8 @@ def get_tool_database():
         st.warning("Tidak dapat membuat koneksi database. Periksa nama database.")
 
 
-# def add_material_form(conn):
-#     """
-#     Menampilkan form Streamlit untuk input data material baru dan menyimpannya ke database.
-#     """
-#     st.subheader("Input Data Material Baru")
-    
-#     # Menentukan kolom yang wajib diisi dan yang sering diubah
-#     # 'id' akan diurus secara otomatis (PRIMARY KEY)
-    
-#     with st.form("new_material_form1213"):
-#         # Kolom wajib/penting
-#         col1, col2 = st.columns(2)
-#         with col1:
-#             material_name = st.text_input("Nama Material (Wajib)", max_chars=100)
-#             material_type = st.selectbox("Tipe (Contoh: 1)", [1, 2, 3]) # Asumsi tipe adalah INTEGER
-#         with col2:
-#             chipping_class = st.number_input("Chipping Class (0-30)", min_value=0, max_value=30, value=10, step=1)
-#             norm_code = st.text_input("Norm Code (Opsional)", max_chars=50)
-
-#         # Kolom Faktor Pemotongan (Sangat penting di Hypermill)
-#         st.markdown("##### Faktor Pemotongan (Biasanya 1.0 jika tidak diubah)")
-#         col_milling = st.columns(4)
-#         milling_vc = col_milling[0].number_input("Milling Factor Vc", value=1.0, format="%.1f")
-#         milling_fz = col_milling[1].number_input("Milling Factor Fz", value=1.0, format="%.1f")
-#         milling_ae = col_milling[2].number_input("Milling Factor Ae", value=1.0, format="%.1f")
-#         milling_ap = col_milling[3].number_input("Milling Factor Ap", value=1.0, format="%.1f")
-        
-#         # Kolom lainnya (untuk kemudahan, bisa di-set nilai default)
-#         comment = st.text_area("Komentar", max_chars=255)
-
-#         submitted = st.form_submit_button("Tambah Material")
-
-#         if submitted:
-#             if not material_name:
-#                 st.error("Nama Material wajib diisi!")
-#             else:
-#                 try:
-#                     # Ambil ID terbesar saat ini dan tambahkan 1, atau mulai dari 1 jika kosong
-#                     cursor = conn.cursor()
-#                     cursor.execute("SELECT MAX(id) FROM Materials")
-#                     max_id = cursor.fetchone()[0]
-#                     new_id = (max_id if max_id is not None else 0) + 1
-#                     new_guid_uuid = uuid.uuid4()
-#                     new_obj_guid_blob = new_guid_uuid.bytes
-#                     placeholder_guid_blob = b'\x00' * 16 
-                    
-#                     sql_insert = """
-#                     INSERT INTO Materials (
-#                         id, type, name, norm_code, comment, obj_guid, parent_id, mat_db_obj_guid, chipping_class, 
-#                         milling_factor_vc, milling_factor_fz, milling_factor_ae, milling_factor_ap, 
-#                         drilling_factor_vc, drilling_factor_fz, insert_factor_vc, insert_factor_fz, insert_factor_ae, insert_factor_ap
-#                     ) VALUES (
-#                         ?, ?, ?, ?, ?, ?, ?, ?, ?, 
-#                         ?, ?, ?, ?, 
-#                         ?, ?, ?, ?, ?, ?
-#                     )
-#                     """
-#                     # Gunakan nilai default 1.0 untuk faktor-faktor drilling/insert 
-#                     # agar tidak perlu banyak input di form
-#                     params = (
-#                     new_id, material_type, material_name, norm_code, comment, 
-#                     new_obj_guid_blob,      # <--- Menggunakan data BLOB (bytes)
-#                     None,                   # parent_id
-#                     placeholder_guid_blob,  # <--- Menggunakan placeholder BLOB
-#                     chipping_class, 
-#                     milling_vc, milling_fz, milling_ae, milling_ap,
-#                     1.0, 1.0, 1.0, 1.0, 1.0, 1.0 
-#                 )
-                    
-#                     # Eksekusi perintah SQL
-#                     execute_sql(conn, sql_insert, params)
-#                     st.success(f"Material **'{material_name}'** berhasil ditambahkan dengan ID: {new_id}!")
-#                     # Refresh aplikasi untuk melihat data baru (opsional)
-#                     st.rerun() 
-                    
-#                 except Exception as e:
-#                     st.error(f"Gagal menambahkan data: {e}")
-
-
-@st.cache_resource
 def get_material_db():
-    database = USED_MATERIAL_DATABASE
+    database = USED_MATERIALS_DATABASE
     conn = create_connection(database)
 
     if conn is not None:
@@ -346,129 +264,235 @@ def get_material_db():
 
         df_material_database = df4.copy()
         # st.dataframe(df_material_database)
+
+        # =================================================================
+        # START: PERBAIKAN TIPE DATA (MENGATASI ARROWINVALID)
+        # =================================================================
+        
+        # Daftar kolom ID yang rentan salah dibaca sebagai binary/object
+        cols_to_convert_to_int = [
+            'chipping_class', # Kolom yang di-error-kan PyArrow (asumsi nama akhirnya)
+            'milling_chipping_class_id',
+            'chipping_class_id',
+            # Tambahkan kolom lain yang seharusnya ID/INTEGER
+        ]
+        
+        for col in cols_to_convert_to_int:
+            if col in df_material_database.columns:
+                try:
+                    # 1. pd.to_numeric: Mengubah ke angka. errors='coerce' mengganti data non-angka (seperti bytes yang aneh) menjadi NaN.
+                    # 2. fillna(0): Mengisi NaN (termasuk NULL dari DB) dengan 0.
+                    # 3. astype('int64'): Mengkonversi hasil akhirnya menjadi tipe integer 64-bit yang aman.
+                    df_material_database[col] = pd.to_numeric(
+                        df_material_database[col], 
+                        errors='coerce'
+                    ).fillna(0).astype('int64')
+                except Exception as e:
+                    # Jika konversi integer benar-benar gagal (sangat jarang), ubah ke string sebagai fallback
+                    df_material_database[col] = df_material_database[col].astype(str)
+
+        # =================================================================
+        # END: PERBAIKAN TIPE DATA
+        # =================================================================
+        st.markdown(f"# df_material_database")
+        st.dataframe(df_material_database)
         return df_material_database
         
     else:
         st.warning("Tidak dapat membuat koneksi database. Periksa nama database.")
 
 def create_new_material():
-        df_material_database = get_material_db()
-        database = USED_TOOL_DATABASE
-        conn = create_connection(database)
+    df_material_database = get_material_db()
+    database = USED_TOOL_DATABASE
+    conn = create_connection(database)
 
-        if df_material_database is not None:
-            selected_group = st.selectbox(
-                'Select Material Group', 
-                df_material_database['name_of_MaterialGroup'].unique()
-            )
+    if not df_material_database.empty:
+        selected_group = st.selectbox(
+        'Select Material Group',
+        df_material_database['name_of_MaterialGroup'].unique()
+        )
 
-            df_filtered_material_group = df_material_database[
-                df_material_database['name_of_MaterialGroup'] == selected_group
-            ]
+        df_filtered_material_group = df_material_database[
+        df_material_database['name_of_MaterialGroup'] == selected_group
+        ]
 
-            selected_sub_group = st.selectbox(
-                'Select Material Sub Group',
-                df_filtered_material_group['name_of_df4'].unique()
-            )
+        selected_sub_group = st.selectbox(
+        'Select Material Sub Group',
+        df_filtered_material_group['name_of_df4'].unique()
+        )
+
+        df_filtered_material_sub_group = df_filtered_material_group[
+        df_filtered_material_group['name_of_df4'] == selected_sub_group
+        ]
+
+        selected_quality = st.selectbox(
+        'Select Quality',
+        df_filtered_material_sub_group['name_of_Qualities'].unique()
+        )
+
+        df_filtered_quality = df_filtered_material_sub_group[
+        df_filtered_material_sub_group['name_of_Qualities'] == selected_quality
+        ].copy()
+
+        df_filtered_quality['hardness_hb_max'] = df_filtered_quality['hardness_hb_max'].astype(str)
+        df_filtered_quality['hardness_hrc_max'] = df_filtered_quality['hardness_hrc_max'].astype(str)
+
+        df_filtered_quality['material_name'] = df_filtered_quality.apply(
+            lambda row: f"{row['material_no']} | {row['jis_name']} | {row['din_name']} | HB Max: {row['hardness_hb_max']} | HRC Max: {row['hardness_hrc_max']}", 
+            axis=1
+        )
+
+        selected_material = st.selectbox(
+        'Select Material',
+        df_filtered_quality['material_name'].unique()
+        )
+
+        df_filtered_material = df_filtered_quality[
+        df_filtered_quality['material_name'] == selected_material
+        ]
+
+        df_new_material = df_filtered_material.copy()
+        st.dataframe(df_new_material)
+        material_comment = st.text_input("Comment")
+        submitted = st.button("Save Material")
+
+    if submitted:
+        if df_new_material.empty:
+          st.error("Not Found a new material")
+        else:
+            try:
+                cursor = conn.cursor()
+
+                row_data = df_new_material.iloc[0]
+
+                parent_name = row_data['name_of_df1']
+                # child_name = row_data['jis_name']
+                material_no = row_data['material_no']
+                din_name = row_data['din_name']
+                afnor_name = row_data['afnor_name']
+                bs_name = row_data['bs_name']
+                uni_name = row_data['uni_name']
+                csn_name = row_data['csn_name']
+                jis_name = row_data['jis_name']
+                ss_name = row_data['ss_name']
+                gost_name = row_data['gost_name']
+                uns_name = row_data['uns_name']
+                aisi_name = row_data['aisi_name']
+                trademark_1 = row_data['trademark_1']
+                trademark_2 = row_data['trademark_2']
+                trademark_3 = row_data['trademark_3']
+                chipping_class_id = row_data['chipping_class_id']
                 
-            df_filtered_material_sub_group = df_filtered_material_group[
-                df_filtered_material_group['name_of_df4'] == selected_sub_group
-            ]
-        
-            selected_quality = st.selectbox(
-                'Select Quality',
-                df_filtered_material_sub_group['name_of_Qualities'].unique()
-            )
 
-            df_filtered_quality = df_filtered_material_sub_group[
-                df_filtered_material_sub_group['name_of_Qualities'] == selected_quality
-            ].copy()
-
-            df_filtered_quality['material_name'] = (
-                df_filtered_quality['jis_name'] + '|' + 
-                'HB Max:' + " " + df_filtered_quality['hardness_hb_max'].astype(str) + "|" +
-                'HRC Max:' + " " + df_filtered_quality['hardness_hrc_max'].astype(str)
-            )
-
-            selected_material = st.selectbox(
-                'Select Material',
-                df_filtered_quality['material_name'].unique()
-            )
-            
-            df_filtered_material = df_filtered_quality[
-                df_filtered_quality['material_name'] == selected_material
-            ]
-            
-            df_new_material = df_filtered_material.copy()
-            st.dataframe(df_new_material)
-
-            submitted = st.button("Save Material")
+                list_of_names = [jis_name, din_name, aisi_name, afnor_name, bs_name, uni_name, csn_name, ss_name, gost_name, uns_name]
+                child_name = next((name for name in list_of_names if name), parent_name)
                 
-            if submitted:
-                if df_new_material.empty:
-                    st.error("Not Found a new material")
+                list_of_trademarks = [trademark_1, trademark_2, trademark_3]
+                trademark = next((t_mark for t_mark in list_of_trademarks if t_mark), None) 
+
+                # 1. PERIKSA KEBERADAAN PARENT (name_of_df1)
+                cursor.execute("SELECT id FROM Materials WHERE name = ?", (parent_name,))
+                existing_parent_id = cursor.fetchone() 
+
+                # 2. PERIKSA KEBERADAAN CHILD (jis_name)
+                cursor.execute("SELECT id FROM Materials WHERE name = ?", (child_name,))
+                existing_child_id = cursor.fetchone()
+
+                # =================================================================
+                # Logika Pengecekan
+                # ================================================================= 
+                if existing_child_id:
+                    st.info(f"Data material (Child) dengan nama '{child_name}' sudah ada di database. Tidak ada data yang disimpan.")
+                elif existing_parent_id:
+                    parent_id_to_use = existing_parent_id[0]
+
+                    cursor.execute("SELECT MAX(id) FROM Materials")
+                    max_id = cursor.fetchone()[0]
+                    new_child_id = (max_id if max_id is not None else 0) + 1
+
+                    child_guid_uuid = uuid.uuid4()
+                    child_obj_guid_blob = child_guid_uuid.bytes
+                    placeholder_guid_blob = b'\x00' * 16
+
+                    sql_insert = """
+                    INSERT INTO Materials (
+                    id, type, name, norm_code, comment, obj_guid, parent_id, mat_db_obj_guid, chipping_class,
+                    milling_factor_vc, milling_factor_fz, milling_factor_ae, milling_factor_ap,
+                    drilling_factor_vc, drilling_factor_fz, insert_factor_vc, insert_factor_fz, insert_factor_ae, insert_factor_ap
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """
+                    params_child = (
+                    new_child_id, 2, child_name, "", material_comment, child_obj_guid_blob, parent_id_to_use, placeholder_guid_blob, row_data['chipping_class_id'],
+                    row_data['milling_factor_vc'], row_data['milling_factor_fz'], row_data['milling_factor_ae'], row_data['milling_factor_ap'],
+                    row_data['drilling_factor_vc'], row_data['drilling_factor_fz'], row_data['insert_factor_vc'], row_data['insert_factor_fz'],
+                    row_data['insert_factor_ae'], row_data['insert_factor_ap']
+                    )
+
+                    cursor.execute(sql_insert, params_child)
+                    conn.commit()
+                    st.success(f"Material Child '{child_name}' berhasil disimpan. Dihubungkan ke Parent ID yang sudah ada: {parent_id_to_use}! chipping_class {chipping_class_id}")
                 else:
-                    try:
-                        cursor = conn.cursor()
+                    cursor.execute("SELECT MAX(id) FROM Materials")
+                    max_id = cursor.fetchone()[0]
+                    new_id = (max_id if max_id is not None else 0) + 1
+                    parent_guid_uuid = uuid.uuid4()
+                    parent_obj_guid_blob = parent_guid_uuid.bytes
+                    child_guid_uuid = uuid.uuid4()
+                    child_obj_guid_blob = child_guid_uuid.bytes
+                    placeholder_guid_blob = b'\x00' * 16
 
-                        row_data = df_new_material.iloc[0] 
+                    sql_insert = """
+                    INSERT INTO Materials (
+                    id, type, name, norm_code, comment, obj_guid, parent_id, mat_db_obj_guid, chipping_class,
+                    milling_factor_vc, milling_factor_fz, milling_factor_ae, milling_factor_ap,
+                    drilling_factor_vc, drilling_factor_fz, insert_factor_vc, insert_factor_fz, insert_factor_ae, insert_factor_ap
+                    ) VALUES (
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?, ?
+                    )
+                    """
+                    params = [
+                    (new_id, 1, row_data['name_of_df1'], "", "Parent Class", parent_obj_guid_blob, None, placeholder_guid_blob, row_data['chipping_class_id'],
+                    row_data['milling_factor_vc'], row_data['milling_factor_fz'], row_data['milling_factor_ae'], row_data['milling_factor_ap'],
+                    row_data['drilling_factor_vc'], row_data['drilling_factor_fz'], row_data['insert_factor_vc'], row_data['insert_factor_fz'],
+                    row_data['insert_factor_ae'], row_data['insert_factor_ap']
+                    ),
+                    (new_id + 1, 2, child_name, "", material_comment, child_obj_guid_blob, new_id, placeholder_guid_blob, row_data['chipping_class_id'],
+                    row_data['milling_factor_vc'], row_data['milling_factor_fz'], row_data['milling_factor_ae'], row_data['milling_factor_ap'],
+                    row_data['drilling_factor_vc'], row_data['drilling_factor_fz'], row_data['insert_factor_vc'], row_data['insert_factor_fz'],
+                    row_data['insert_factor_ae'], row_data['insert_factor_ap']
+                    )
+                    ]
 
-                        cursor.execute("SELECT MAX(id) FROM Materials")
-                        max_id = cursor.fetchone()[0]
-                        new_id = (max_id if max_id is not None else 0) + 1
-                        new_guid_uuid = uuid.uuid4()
-                        new_obj_guid_blob = new_guid_uuid.bytes
-                        placeholder_guid_blob = b'\x00' * 16 
+                    cursor.executemany(sql_insert, params)
+                    conn.commit()
+                    # Use material_data instead of row_data for better context
+                    st.success(f"Material '{row_data['name_of_df1']}' successfully saved with ID {new_id}! chipping_class {chipping_class_id}")
 
-                        sql_insert = """
-                        INSERT INTO Materials (
-                            id, type, name, norm_code, comment, obj_guid, parent_id, mat_db_obj_guid, chipping_class, 
-                            milling_factor_vc, milling_factor_fz, milling_factor_ae, milling_factor_ap, 
-                            drilling_factor_vc, drilling_factor_fz, insert_factor_vc, insert_factor_fz, insert_factor_ae, insert_factor_ap
-                        ) VALUES (
-                            ?, ?, ?, ?, ?, ?, ?, ?, ?, 
-                            ?, ?, ?, ?, 
-                            ?, ?, ?, ?, ?, ?
-                        )
-                        """
-
-                        params = [
-                            (new_id, 1, row_data['name_of_df1'], "", "", new_obj_guid_blob, None, placeholder_guid_blob, row_data['milling_chipping_class_id'],
-                             row_data['milling_factor_vc'], row_data['milling_factor_fz'], row_data['milling_factor_ae'], row_data['milling_factor_ap'],
-                             row_data['drilling_factor_vc'], row_data['drilling_factor_fz'], row_data['insert_factor_vc'], row_data['insert_factor_fz'],
-                             row_data['insert_factor_ae'], row_data['insert_factor_ap']
-                             ),
-                             (new_id, 1, row_data['name_of_df1'], "", "", new_obj_guid_blob, None, placeholder_guid_blob, row_data['milling_chipping_class_id'],
-                             row_data['milling_factor_vc'], row_data['milling_factor_fz'], row_data['milling_factor_ae'], row_data['milling_factor_ap'],
-                             row_data['drilling_factor_vc'], row_data['drilling_factor_fz'], row_data['insert_factor_vc'], row_data['insert_factor_fz'],
-                             row_data['insert_factor_ae'], row_data['insert_factor_ap']
-                             )
-                        ]
-
-                        cursor.executemany(sql_insert,params)
-
-                        conn.commit()
-                        st.success(f"✅ Material '{row_data['name_of_df1']}' berhasil disimpan dengan ID {new_id}!")
-                        st.rerun
-
-                    except Exception as e:
-                        st.error(f"❌ Error saat menyimpan data: {e}")
-                    finally:
-                        if conn:
-                            conn.close()
+            except Exception as e:
+                # Translated error message
+                st.error(f"Error while saving data: {e}") 
+            finally:
+                if conn:
+                    # Translated success message
+                    conn.close()
 
 
 
 def main():
     pilihan_tabel = st.sidebar.radio('Select a Menu:', (
+            'Database',
             'Create Raw Material'
         ))
     
-    if pilihan_tabel == 'Create Raw Material':
+    if pilihan_tabel == "Database":
+        get_tool_database()
+    elif pilihan_tabel == 'Create Raw Material':
         create_new_material()
 
 
-    # get_tool_database()
+    
     
 
 if __name__ == '__main__':
